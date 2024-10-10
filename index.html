@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Continuous Speech to Text</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background-color: #f4f4f4;
+      margin: 0;
+    }
+
+    .container {
+      text-align: center;
+      background-color: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+
+    #transcript {
+      margin-top: 20px;
+      padding: 10px;
+      width: 300px;
+      height: 150px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      background-color: #fafafa;
+      overflow-y: auto;
+      font-size: 16px;
+    }
+
+    .btn {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      font-size: 16px;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-top: 10px;
+      margin-right: 5px;
+    }
+
+    .btn:hover {
+      background-color: #0056b3;
+    }
+
+    .btn:disabled {
+      background-color: #aaa;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Continuous Speech to Text</h1>
+    <p>Click "Start Listening" to begin transcription and "Stop Listening" to save the transcript.</p>
+    <button class="btn" id="start-btn">Start Listening</button>
+    <button class="btn" id="stop-btn" disabled>Stop Listening</button>
+    <div id="transcript"></div>
+  </div>
+
+  <script>
+    // Check if the browser supports speech recognition
+    window.SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!window.SpeechRecognition) {
+      alert("Your browser does not support Speech Recognition. Try using Google Chrome.");
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.interimResults = true;  // Show partial results
+    recognition.lang = 'en-US';  // Set language
+    recognition.continuous = true;  // Keep listening until manually stopped
+
+    const startBtn = document.getElementById('start-btn');
+    const stopBtn = document.getElementById('stop-btn');
+    const transcriptDiv = document.getElementById('transcript');
+    let finalTranscript = '';  // Accumulate only the final text
+    let interimTranscript = '';  // Store interim results for display
+
+    startBtn.addEventListener('click', () => {
+      transcriptDiv.textContent = '';  // Clear visible transcript for the new session
+      recognition.start();  // Start listening
+      startBtn.disabled = true;
+      stopBtn.disabled = false;
+    });
+
+    stopBtn.addEventListener('click', () => {
+      recognition.stop();  // Stop listening
+      startBtn.disabled = false;
+      stopBtn.disabled = true;
+      // Save the accumulated transcript to the same text document
+      saveToTxt(finalTranscript);
+    });
+
+    recognition.addEventListener('result', (event) => {
+      interimTranscript = '';  // Reset interim transcript for display
+
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+
+        if (event.results[i].isFinal) {
+          finalTranscript += transcript + ' ';  // Only accumulate final results
+        } else {
+          interimTranscript += transcript;  // Show interim text without saving
+        }
+      }
+
+      transcriptDiv.textContent = finalTranscript + interimTranscript;  // Display the interim results live
+    });
+
+    recognition.addEventListener('end', () => {
+      if (!startBtn.disabled) {
+        // Do not restart recognition if stopped manually
+        return;
+      }
+      recognition.start();  // Automatically restart listening if not manually stopped
+    });
+
+    // Function to save the accumulated text as a .txt document
+    function saveToTxt(text) {
+      const blob = new Blob([text], {
+        type: 'text/plain'
+      });
+      const link = document.createElement('a');
+      link.href = window.URL.createObjectURL(blob);
+      link.download = 'transcription.txt';  // Save as a .txt file
+      link.click();
+    }
+  </script>
+</body>
+</html>
